@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<h1>Enter a Number</h1>
+<form id="numberForm">
+    <label for="numberInput">Number:</label>
+    <input type="number" id="numberInput" required>
+    <button type="submit">Submit</button>
+</form>
+
+<p id="result"></p>
+<script type='text/javascript' src='astar.js'></script>
+<script type='text/javascript'>
+
+    function MergeArrayH(arr1, arr2) {
+        let startIn = [];
+        let endpointIn = [];
+        let startPoint = [];
+        let endpoint = [];
+        const nGraph = [];
+
+        // Finding start and end points in both arrays
+        for (let i = 0; i < Math.max(arr1.length, arr2.length); i++) {
+            if (arr1[i] && arr1[i][0] === 1) {
+                endpoint = arr1;
+                endpointIn.push(i)
+                console.log(`Found endpoint in arr1: ${endpoint} at index ${endpointIn}`);
+            }
+            if (arr1[i] && arr1[i][arr1[i].length - 1] === 1) {
+                startPoint = arr1;
+                startIn.push(i)
+                console.log(`Found startPoint in arr1: ${startPoint} at index ${startIn}`);
+            }
+            if (arr2[i] && arr2[i][0] === 1) {
+                endpoint = arr2;
+                endpointIn.push(i)
+                console.log(`Found endpoint in arr2: ${endpoint} at index ${endpointIn}`);
+            }
+            if (arr2[i] && arr2[i][arr2[i].length - 1] === 1) {
+                startPoint = arr2;
+                startIn.push(i)
+                console.log(`Found startPoint in arr2: ${startPoint} at index ${startIn}`);
+            }
+        }
+        function same(arr1,arr2) {
+            const sortedArr1 = arr1.slice().sort();
+            const sortedArr2 = arr2.slice().sort();
+            for (let i = 0; i < sortedArr1.length; i++) {
+                if (sortedArr1[i] !== sortedArr2[i]) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        // Merging arrays based on start and end points
+        if (same(startIn,endpointIn)) {
+            console.log(startPoint)
+            console.log(endpoint)
+            for (let i = 0; i < Math.max(startPoint.length, endpoint.length); i++) {
+                nGraph.push([
+                    ...(startPoint[i] || []),
+                    ...(endpoint[i] || [])
+                ]);
+            }
+        }
+
+        console.log(nGraph); // Output merged array
+        return nGraph; // Return the merged array
+    }
+
+    let g1 = [
+        [0, 0, 0, 0],
+        [0, 1, 1, 1],
+        [0, 0, 0, 0],
+        [0, 1, 1, 1],
+        [0, 0, 0, 0]
+    ];
+    let g2 = [
+        [0, 0, 1, 0],
+        [1, 1, 1, 0],
+        [0, 0, 1, 0],
+        [1, 1, 1, 0],
+        [0, 0, 0, 0]
+    ];
+
+    var graph1 = new Graph(g1);
+    var graph2 = new Graph(g2);
+    const newArr = MergeArrayH(g2,g1)
+    const graph = new Graph(newArr)
+    var start = graph.grid[1][1];
+    var end = graph.grid[1][6];
+    var result = astar.search(graph, start, end);
+    console.log(result)
+
+</script>
+<script>
+    document.getElementById('numberForm').addEventListener('submit', function(event) {
+        event.preventDefault(); // Prevent the form from submitting the traditional way
+
+        const numberValue = document.getElementById('numberInput').value; // Retrieve the input value
+        document.getElementById('result').textContent = `You entered: ${numberValue}`; // Display the result
+    });
+</script>
+</body>
+</html>
