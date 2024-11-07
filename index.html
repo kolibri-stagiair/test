@@ -7,41 +7,39 @@
     <style>
         #grid-container {
             display: grid;
-            grid-template-columns: repeat(56, 20px); /* 26 columns */
-            margin-top: 20px; /* Added margin for better spacing */
+            grid-template-columns: repeat(56, 10px); /* 26 columns */
+            margin-top: 10px; /* Added margin for better spacing */
         }
         .none {
-            width: 20px;
-            height: 20px;
+            width: 10px;
+            height: 10px;
             background-color: transparent;
 
         }
         .square {
-            width: 20px;
-            height: 20px;
-            background-color: lightblue;
-            border: 1px solid #000;
+            width: 10px;
+            height: 10px;
+            background-color: lightskyblue;
+            border: 1px solid grey;
         }
         .wall {
-            width: 20px;
-            height: 20px;
+            width: 10px;
+            height: 10px;
             background-color: black;
-            border: 1px solid #000;
+            border: 1px solid grey;
         }
 
         .path {
-            width: 20px;
-            height: 20px;
-
-            border: 1px solid #000;
+            width: 10px;
+            height: 10px;
+            border: 1px solid grey;
             background-color: lightcoral;
         }
         .shelf {
-            width: 20px;
-            height: 20px;
-
-            border: 1px solid #000;
-            background-color: lightgrey;
+            width: 10px;
+            height: 10px;
+            border: 1px solid grey;
+            background-color: darkgray;
         }
     </style>
 </head>
@@ -93,12 +91,19 @@
         const hall1 = Number(document.getElementById('hall1').value);
         const hall2 = document.getElementById('hall2').value ? document.getElementById('hall2').value :null ;
         const end = document.getElementById('end').value;
-        const coords= end.split(',')
-        renderMap(hall1,Number(hall2),coords[0],coords[1])
+        const AllCoords= end.split(';')
+        const coords = AllCoords[0].split(',')
+
+        const startTime = performance.now();
+        renderMap(hall1,Number(hall2),AllCoords)
+        const endTime = performance.now();
+
+        console.log(`Call to doSomething took ${endTime - startTime} milliseconds`)
     }
 
+    //Acquire the hall json
     function fetchJSONData() {
-        return fetch("./test.json")
+        return fetch("./TestVeryLarge.json")
             .then((res) => {
                 if (!res.ok) {
                     throw new Error(`HTTP error! Status: ${res.status}`);
@@ -115,6 +120,7 @@
             });
     }
 
+        //Merge the hall arrays horizontally
         function MergeArrayH(arr1, arr2) {
 
         const startpoint_one_left = []
@@ -160,6 +166,7 @@
             }
         return nGraph;
     }
+    //Check for corners in the halls
         function checkWalls(arr) {
             const left = arr.map(row => row[0]);
             const right = arr.map(row => row[row.length - 1]);
@@ -194,23 +201,9 @@
             const leftTwo = arr2.map(row => row[0]);
             const rightTwo = arr2.map(row => row[row.length - 1]);
 
-            const idOne = []; // Array to hold the indices
-            const idTwo = []
-            // Check if any element in the last row is 1
-             bottomOne.some((value, index) => {
-                if (value === 1) {
-                    idOne.push(index); // Store the index if the value is 1
-                }
-            });
-            top.some((value, index) => {
-                if (value === 1) {
-                    idTwo.push(index); // Store the index if the value is 1
-                }
-            });
             //Arr1 Has no corners Arr2 has a right corner
             if(!rightTwo.some(x => x === 1) && !topR.some(x => x === 1)){
-                if(leftOne.some(x => x === 1) && rightOne.some(x=>x===1))
-                {
+                if(leftOne.some(x => x === 1) && rightOne.some(x=>x===1)) {
                     const hHalls = AllHalls.filter((x)=>{if(x.id===h1){return x}})[0].horizontalHalls
                         const h = hHalls.filter(x=>x.verticalHalls.some((j)=> {
                             if(j.id === h2){
@@ -235,14 +228,17 @@
                 }
             }
         }
+        //Merge two vertical halls
         function MergeArrayV(arr1, arr2,h1,h2) {
             const long_arr = Math.max(arr1.length, arr2.length);
-            const maxCols = Math.max(arr1[0]?.length || 0, arr2[0]?.length || 0);
+            let maxCols = arr1[0].length+arr2[0].length
             let merge;
+            //Check if either hall1 or 2 has a corner
             const check = checkWalls(arr1)
             const checkTwo = checkWalls(arr2)
             const m = VDoorToDoor(arr1,arr2,h1,h2)
 
+            //Check if h1 and h2 are on the left side
             if([2,3].includes(check) && [2,3].includes(checkTwo))
             {
                 //When the vertical hall and its connected hall are on the left side
@@ -266,38 +262,67 @@
                     }
                 }
             }
+            //Check if hall 1 has no corners and hall2 has either a top right or top left one
             if ([-1].includes(check) && [1, 2].includes(checkTwo)) {
+                console.log("H2")
                 let sI ; // Starting index for arr2 insertion.
                 // Ensure sI is calculated based on m
-                sI = m < 0 ? arr2[0].length - arr1[0].length + m : m;
-                // Calculate the max number of columns needed
-                const maxColsRequired = Math.max(arr2[0]?.length || 0, arr1[0]?.length || 0) + Math.abs(m);
-                // Create a merge array large enough to accommodate both arrays
-                merge = Array.from({ length: arr2.length + arr1.length }, () => Array(maxColsRequired).fill(3));
-                // Fill the merge array with arr2 data first (top rows)
-                for (let i = 0; i < arr2.length; i++) {
-                    for (let j = 0; j < arr2[i].length; j++) {
-                        merge[i][j] = arr2[i][j]; // Copy from arr2 from right to left
+                if(checkTwo===1){
+                    sI = m < 0 ? arr2[0].length - arr1[0].length + m : m;
+                    // Calculate the max number of columns needed
+                    merge = Array.from({ length: long_arr }, () => Array(maxCols).fill(3));
+                    // Fill with arr2 data first (top rows)
+                    for (let i = 0; i < arr2.length; i++) {
+                        merge[i] = Array(maxCols).fill(3); // Ensure the row exists and is filled with 3s
+                        for (let j = 0; j < arr2[i].length; j++)
+                        {
+                            merge[i][j+(-sI)] = arr2[i][j]; // Copy from arr2 from right to left
+                        }
                     }
-                }
-                // Fill with arr1 data (remaining rows)
-                for (let i = 0; i < arr1.length; i++) {
-                    // Ensure the row is created if it hasn't been filled by arr2
-                    if (!merge[i + arr2.length]) {
-                        merge[i + arr2.length] = Array(maxColsRequired).fill(3);
-                    }
-                    // Insert arr1 data, adjusting for sI
-                    for (let j = 0; j < arr1[i].length; j++) {
-                        // Insert elements from arr1 at position [i + arr2.length][sI + j]
-                        if (sI + j < maxColsRequired) {
-                            merge[i + arr2.length][sI + j] = arr1[i][j];
+                    // Fill with arr1 data (remaining rows)
+                    for (let i = 0; i < arr1.length ; i++)
+                    {
+                        // Ensure the row is created if it hasn't been filled by arr2
+                        if (!merge[i + arr2.length])
+                        {
+                            merge[i + arr2.length] = Array(maxCols).fill(3);
+                        }
+
+                        for (let j = 0; j < arr1[i].length; j++)
+                        {
+                            merge[i+arr2.length][j] = arr1[i][j];
                         }
                     }
                 }
+                else{
+                    sI = m < 0 ? arr1[0].length - arr2[0].length + m : m;
+                    // Calculate the max number of columns needed
+                    merge = Array.from({ length: long_arr }, () => Array(maxCols).fill(3));
+                    // Fill with arr2 data first (top rows)
+                    for (let i = 0; i < arr2.length; i++) {
+                        merge[i] = Array(maxCols).fill(3); // Ensure the row exists and is filled with 3s
+                        for (let j = 0; j < arr2[i].length; j++)
+                        {
+                            merge[i][j] = arr2[i][j]; // Copy from arr2 from right to left
+                        }
+                    }
+                    // Fill with arr1 data (remaining rows)
+                    for (let i = 0; i < arr1.length ; i++)
+                    {
+                        // Ensure the row is created if it hasn't been filled by arr2
+                        if (!merge[i + arr2.length])
+                        {
+                            merge[i + arr2.length] = Array(maxCols).fill(3);
+                        }
+
+                        for (let j = 0; j < arr1[i].length; j++)
+                        {
+                            merge[i+arr2.length][j+sI] = arr1[i][j];
+                        }
+                    }
+                }
+
             }
-
-
-
             //When the vertical hall and its connected hall are on the right side
             else if([0].includes(check) && [1].includes(checkTwo))
             {
@@ -315,17 +340,18 @@
                     if (!merge[i + arr2.length]) {
                         merge[i + arr2.length] = Array(maxCols).fill(3);
                     }
+
                     for (let j = 0; j < arr1[i].length; j++) {
-                        merge[i + arr2.length ][j+arr2.length] = arr1[i][j];
+                        merge[i +arr2.length][j + (arr2[0].length-arr1[0].length)] = arr1[i][j];
                     }
                 }
             }
             return merge;
         }
+        //Loop through all horizontal neighbors of the current node and those to find the goal
         function loopNeighboursHorizontal(start, goal, visited = new Set()) {
             // Check if the current node matches the goal
             if (start.id === goal) {
-
                 return true;
             }
             // Mark this node as visited
@@ -344,18 +370,17 @@
             return false; // Return false if no matches found
         }
 
+        //Check for what kinda connection is between the designated halls
         function checkGraph(allHalls, start, goal = null) {
             if (goal)
                 for (const hall of AllHalls) {
-
                     if (hall.id === start) {
                         if (hall.verticalHalls && hall.verticalHalls.some(h => h.id === goal)) {
-
                             return 1; // Found in vertical halls
                         } else if (loopNeighboursHorizontal(hall,goal)) {
                             return 0; // Horizontal Connection between halls
                         }
-                        return -1; // Start hall found, but goal not found
+                        return -1; // Start hall found, but goal not found nearby
                     }
                 }
             else{
@@ -364,29 +389,32 @@
 
             return 2; // Start hall not found
         }
-        function renderMap(hall1,hall2=null,x,y)
+        function renderMap(hall1,hall2=null,coords)
         {
-        document.getElementById('grid-container').innerHTML = '';
-        const startTime = performance.now();
-        let mergedGraph = null;
-        fetchJSONData().then(allHalls=>{
-            if(allHalls)
-            {
+
+
+
+            const coordinates = coords
+            document.getElementById('grid-container').innerHTML = '';
+
+            let mergedGraph = null;
+            fetchJSONData().then(allHalls=>{
+                if(allHalls)
+                {
                 json = allHalls
                 const v = checkGraph(allHalls,hall1,hall2)
 
-                //0 == Direct horizontal connection
+                //0 == horizontal connection
                 if(v===0) {
-
                     // If the required position is in a singular hall
-                    if (hall2 === null || hall2 === 0 &&!mergedGraph) {
+                    if (!hall2 && !mergedGraph) {
                         const gridContainer = document.getElementById('grid-container');
                         mergedGraph = allHalls[hall1]
-                        gridContainer.style.gridTemplateColumns = `repeat(${mergedGraph[0].length}, 20px)`;
+
+                        gridContainer.style.gridTemplateColumns = `repeat(${mergedGraph[0].length}, 10px)`;
                     }
                     //Ensure a horizontal path over longer distances
                     if (hall2 - 1 > hall1 || hall1 > hall2 + 1 && !mergedGraph) {
-
                         const all_graphs = hall1 > hall2 ? Object.keys(allHalls).map(Number).filter(x => x >= hall2 && x <= hall1)
                             : Object.keys(allHalls).map(Number).filter(x => x >= hall1 && x <= hall2)
                         mergedGraph = allHalls[all_graphs[0]];
@@ -395,29 +423,58 @@
                         }
                         const len = mergedGraph[0].length
                         const gridContainer = document.getElementById('grid-container');
-                        gridContainer.style.gridTemplateColumns = `repeat(${len}, 20px) `;
+                        gridContainer.style.gridTemplateColumns = `repeat(${len}, 10px) `;
                     }
                     //If the user has to travel a nearby horizontal hall
                     if (!mergedGraph) {
                         const gridContainer = document.getElementById('grid-container');
                         mergedGraph = MergeArrayH(allHalls[hall1], allHalls[hall2])
-                        gridContainer.style.gridTemplateColumns = `repeat(${mergedGraph[0].length}, 20px)`;
+                        gridContainer.style.gridTemplateColumns = `repeat(${mergedGraph[0].length}, 10px)`;
                     }
 
                 }
-                // 1 == Direct vertical connection
-                if (v===1 &&mergedGraph===null) {
+                // 1 == vertical connection
+                if (v===1 &&!mergedGraph) {
                     mergedGraph = MergeArrayV(allHalls[hall1],allHalls[hall2],hall1,hall2)
                     const gridContainer = document.getElementById('grid-container');
                     const len = mergedGraph[0].length
-                    gridContainer.style.gridTemplateColumns = `repeat(${ len}, 20px) `;
+                    gridContainer.style.gridTemplateColumns = `repeat(${len}, 10px) `;
                 }
-
-                const graph = new Graph(mergedGraph)
+                const graph = new Graph(mergedGraph);
+                const x = coordinates[0].split(',')[0];
+                const y = coordinates[0].split(',')[1]
                 const start = graph.grid[1][2];
                 const end = graph.grid[x][y];
-                const result = astar.search(graph, start, end);
-                const coords = result.map(point => [point.x, point.y]);
+                const bogus = [];
+                let lLarge = []
+
+                    if (coordinates.length > 1) {
+                        console.log("A")
+                        for (let i = 0; i < coordinates.length; i++) {
+                            let c = coordinates[i]
+                            //TODO CHANGE FROM SUM TO CALCULATE ROUTE, COMPARE THE LENGTHS OF ROUTES
+                            let sum = coordinates[i].split(',').map(Number).reduce((acc, num) => acc + num, 0);
+                            bogus.push({"sum": sum, "coords": c})
+                        }
+
+                        const l = []
+                        let s1 = start
+                        bogus.sort((a, b) => a.sum - b.sum)
+                        bogus.forEach(x => {
+                            let a = x.coords.split(',')[0]
+                            let b = x.coords.split(',')[1]
+                            const p = astar.search(graph, s1, graph.grid[a][b])
+                            s1 = p[p.length - 1]
+                            l.push(p)
+
+                        })
+                        lLarge = l.flat()
+                        console.log(lLarge)
+                    }
+                    const result = astar.search(graph, start, end);
+                    console.log(lLarge)
+                    const coords = (lLarge.length>0? lLarge.map(point=>[point.x,point.y]):result.map(point => [point.x, point.y]));
+
                 const toAdd = document.createDocumentFragment();
                 for (let i = 0; i < graph.grid.length; i++) {
                     for (let j = 0; j < graph.grid[0].length; j++) {
@@ -458,9 +515,6 @@
                 document.getElementById('grid-container').appendChild(toAdd);
             }
         })
-            const endTime = performance.now();
-
-            console.log(`Call to doSomething took ${endTime - startTime} milliseconds`)
         }
 
     document.getElementById('inputForm').addEventListener('submit', handleSubmit);
