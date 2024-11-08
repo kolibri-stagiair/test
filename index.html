@@ -16,7 +16,14 @@
             background-color: transparent;
 
         }
-        .square {
+        .endpoint{
+            width: 10px;
+            height: 10px;
+            border: 1px solid grey;
+            background-color: darkred;
+        }
+        .square
+         {
             width: 10px;
             height: 10px;
             background-color: lightskyblue;
@@ -85,8 +92,11 @@
         Hall1,Hall2,Hall3,Hall4,Hall5
    ]
         let json;
-    function handleSubmit(event) {
+    function handleSubmit(event)
+    {
         event.preventDefault(); // Prevent the default form submission
+        const startTime = performance.now();
+
         // Get the values from the input fields
         const hall1 = Number(document.getElementById('hall1').value);
         const hall2 = document.getElementById('hall2').value ? document.getElementById('hall2').value :null ;
@@ -94,7 +104,6 @@
         const AllCoords= end.split(';')
         const coords = AllCoords[0].split(',')
 
-        const startTime = performance.now();
         renderMap(hall1,Number(hall2),AllCoords)
         const endTime = performance.now();
 
@@ -264,7 +273,7 @@
             }
             //Check if hall 1 has no corners and hall2 has either a top right or top left one
             if ([-1].includes(check) && [1, 2].includes(checkTwo)) {
-                console.log("H2")
+
                 let sI ; // Starting index for arr2 insertion.
                 // Ensure sI is calculated based on m
                 if(checkTwo===1){
@@ -389,11 +398,40 @@
 
             return 2; // Start hall not found
         }
+        function recurMapTraversal(l = [], coordinates, routes, start, graph) {
+            // Base case: If there are no more routes to process, return the result
+            if (routes.length === 0) {
+                return l.flat();
+            }
+            let s1 = start;
+            routes.sort((a, b) => a.sum - b.sum);
+            let a = routes[0].coords.split(',')[0];
+            let b = routes[0].coords.split(',')[1];
+            const p = astar.search(graph, graph.grid[s1.x][s1.y], graph.grid[a][b]);
+            l.push(p);
+            const r1 = routes.shift();
+            const i = coordinates.indexOf(r1.coords);
+            if (i !== -1) {
+                coordinates.splice(i, 1);
+            }
+            const r1x = r1.coords.split(',')[0];
+            const r1y = r1.coords.split(',')[1];
+            const newR = [];
+            for (let i = 0; i < routes.length; i++) {
+                let [x, y] = routes[i].coords.split(',');
+                const pathing =  astar.search(graph, graph.grid[r1x][r1y], graph.grid[x][y]).length
+                newR.push({
+                    "sum":pathing,
+                    "coords": routes[i].coords
+                });
+            }
+
+            // Recursively call the function
+            return recurMapTraversal(l, coordinates, newR, graph.grid[r1x][r1y], graph);
+        }
+
         function renderMap(hall1,hall2=null,coords)
         {
-
-
-
             const coordinates = coords
             document.getElementById('grid-container').innerHTML = '';
 
@@ -445,34 +483,19 @@
                 const y = coordinates[0].split(',')[1]
                 const start = graph.grid[1][2];
                 const end = graph.grid[x][y];
-                const bogus = [];
+                const routes = [];
                 let lLarge = []
 
                     if (coordinates.length > 1) {
-                        console.log("A")
                         for (let i = 0; i < coordinates.length; i++) {
-                            let c = coordinates[i]
-                            //TODO CHANGE FROM SUM TO CALCULATE ROUTE, COMPARE THE LENGTHS OF ROUTES
-                            let sum = coordinates[i].split(',').map(Number).reduce((acc, num) => acc + num, 0);
-                            bogus.push({"sum": sum, "coords": c})
+                            let s = coordinates[i].split(',').map(Number);
+                            routes.push({"sum":  astar.search(graph, start, graph.grid[s[0]][s[1]]).length, "coords": coordinates[i]})
                         }
+                        const coordCopy = structuredClone(coordinates)
+                        lLarge = recurMapTraversal(lLarge,coordCopy,routes,start,graph)
 
-                        const l = []
-                        let s1 = start
-                        bogus.sort((a, b) => a.sum - b.sum)
-                        bogus.forEach(x => {
-                            let a = x.coords.split(',')[0]
-                            let b = x.coords.split(',')[1]
-                            const p = astar.search(graph, s1, graph.grid[a][b])
-                            s1 = p[p.length - 1]
-                            l.push(p)
-
-                        })
-                        lLarge = l.flat()
-                        console.log(lLarge)
                     }
                     const result = astar.search(graph, start, end);
-                    console.log(lLarge)
                     const coords = (lLarge.length>0? lLarge.map(point=>[point.x,point.y]):result.map(point => [point.x, point.y]));
 
                 const toAdd = document.createDocumentFragment();
@@ -480,7 +503,13 @@
                     for (let j = 0; j < graph.grid[0].length; j++) {
                         if (coords.some(set => set[0] === i && set[1] === j)) {
                             const newDiv = document.createElement('div');
-                            newDiv.className = 'path';
+                            if(coordinates.some(set => set ===`${i},${j}`)){
+                                newDiv.className = 'endpoint';
+                            }
+                            else{
+                                newDiv.className = 'path';
+                            }
+
                             toAdd.appendChild(newDiv);
                         }
                         else
