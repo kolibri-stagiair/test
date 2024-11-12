@@ -67,6 +67,7 @@
 <script type='text/javascript' src='AStar.js'></script>
 <script type='text/javascript' src='./JavascriptFiles/Hall.js'></script>
 <script>
+    //TODO MAKE IT SCALABLE FOR DIFFERENT WAREHOUSE LAYOUTS ITS CURRENTLY BASED ON THE WAREHOUSE LAYOUT OF KOLIBRI
         const Hall1 = new Hall(1)
         const Hall2 = new Hall(2)
         const Hall3 = new Hall(3)
@@ -323,7 +324,6 @@
                         {
                             merge[i + arr2.length] = Array(maxCols).fill(3);
                         }
-
                         for (let j = 0; j < arr1[i].length; j++)
                         {
                             merge[i+arr2.length][j+sI] = arr1[i][j];
@@ -398,15 +398,73 @@
 
             return 2; // Start hall not found
         }
+        // Function used if there isn't a direct horizontal or vertical connection to the two halls
+        // So if 4 - 5 - 6
+        //       |   |   |
+        //       1 - 2 - 3
+        // This function would be used to get the route from 3-5 or 1-5 etc...
+        //TODO Make more generic, its currently hardcoded to the Kolibri warehouse layout
+        function IrregularMapTraversal(h1,h2) {
+            const hall1 = AllHalls.filter((x)=>{if(x.id===h1){return x}})
+            const hall2 = AllHalls.filter((x)=>{if(x.id===h2){return x}})
+
+            let con1;
+            let con2;
+            // Find matching vertical hall connections between hall1 and hall2
+            con1 = hall1[0].verticalHalls.filter(x =>
+                hall2[0].horizontalHalls.some(y => y.id === x.id)
+            );
+            if(!con1) {
+                // Find matching horizontal hall connections between hall1 and hall2 if con1 is empty
+                con2 = hall1[0].horizontalHalls.filter(x =>
+                    hall2[0].verticalHalls.some(y => y.id === x.id)
+                );
+            }
+            const con1H = AllHalls.filter((x)=>{if(x.id===con1[0].id){return x}})[0]
+            const x = MergeArrayH(json[hall2[0].id],json[con1H.id])
+            // const y = MergeArrayV(json[hall1[0].id],json[con1H.id],hall1[0].id,con1H.id)
+            const y = json[hall1[0].id]
+            const long_arr = Math.max(x.length, y.length);
+            let maxCols = Math.max(x[0].length, y[0].length);
+            const merge =  Array.from({length: long_arr}, () => Array(maxCols).fill(3));
+            console.log(merge)
+            for (let i = 0; i < x.length; i++) {
+                merge[i] = Array(maxCols).fill(3); // Ensure the row exists and is filled with 3s
+                for (let j = 0; j < x[i].length; j++) {
+                    merge[i][j] = x[i][j]; // Copy from arr2 from right to left
+                }
+            }
+            for (let i = 0; i < y.length ; i++) {
+                // Ensure the row is created if it hasn't been filled by arr2
+                if (!merge[i + x.length]) {
+                    merge[i + x.length] = Array(maxCols).fill(3);
+                }
+
+                for (let j = 0; j < y[i].length; j++) {
+                    // Make it applicable from left to right and right to left
+                    // merge[i+x.length][j+ (x[0].length-y[0].length)] = y[i][j];
+                    merge[i+x.length][j] = y[i][j];
+                }
+            }
+            console.log(merge)
+            return !con1?[h1,con2,h2]:merge;
+
+        }
+        // This function gets used whenever a user puts in more then one goal,
+        // it calculates first the closest distance from A to one of the goals,
+        // Afterwards scraps A, with the chosen goal becoming the new start point
         function recurMapTraversal(l = [], coordinates, routes, start, graph) {
             // Base case: If there are no more routes to process, return the result
             if (routes.length === 0) {
                 return l.flat();
             }
             let s1 = start;
+            // Sort routes on the total length of the path
             routes.sort((a, b) => a.sum - b.sum);
+            // Get the coordinates of the shortest route
             let a = routes[0].coords.split(',')[0];
             let b = routes[0].coords.split(',')[1];
+            // Get the current start point its path towards the current closest point (routes[0])
             const p = astar.search(graph, graph.grid[s1.x][s1.y], graph.grid[a][b]);
             l.push(p);
             const r1 = routes.shift();
@@ -430,6 +488,7 @@
             return recurMapTraversal(l, coordinates, newR, graph.grid[r1x][r1y], graph);
         }
 
+        // Render the map with the pathing
         function renderMap(hall1,hall2=null,coords)
         {
             const coordinates = coords
@@ -444,6 +503,7 @@
 
                 //0 == horizontal connection
                 if(v===0) {
+
                     // If the required position is in a singular hall
                     if (!hall2 && !mergedGraph) {
                         const gridContainer = document.getElementById('grid-container');
@@ -451,6 +511,7 @@
 
                         gridContainer.style.gridTemplateColumns = `repeat(${mergedGraph[0].length}, 10px)`;
                     }
+
                     //Ensure a horizontal path over longer distances
                     if (hall2 - 1 > hall1 || hall1 > hall2 + 1 && !mergedGraph) {
                         const all_graphs = hall1 > hall2 ? Object.keys(allHalls).map(Number).filter(x => x >= hall2 && x <= hall1)
@@ -467,13 +528,23 @@
                     if (!mergedGraph) {
                         const gridContainer = document.getElementById('grid-container');
                         mergedGraph = MergeArrayH(allHalls[hall1], allHalls[hall2])
+
                         gridContainer.style.gridTemplateColumns = `repeat(${mergedGraph[0].length}, 10px)`;
                     }
 
                 }
+
                 // 1 == vertical connection
                 if (v===1 &&!mergedGraph) {
                     mergedGraph = MergeArrayV(allHalls[hall1],allHalls[hall2],hall1,hall2)
+                    const gridContainer = document.getElementById('grid-container');
+                    const len = mergedGraph[0].length
+                    gridContainer.style.gridTemplateColumns = `repeat(${len}, 10px) `;
+                }
+                //Non-direct connection that isn't horizontally traversable
+                if(v===-1&&!mergedGraph){
+
+                    mergedGraph = IrregularMapTraversal(hall1,hall2)
                     const gridContainer = document.getElementById('grid-container');
                     const len = mergedGraph[0].length
                     gridContainer.style.gridTemplateColumns = `repeat(${len}, 10px) `;
