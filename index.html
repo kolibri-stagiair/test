@@ -403,7 +403,16 @@
         //       |   |   |
         //       1 - 2 - 3
         // This function would be used to get the route from 3-5 or 1-5 etc...
-        //TODO Make more generic, its currently hardcoded to the Kolibri warehouse layout
+
+        // TODO Make more generic, its currently hardcoded to the Kolibri warehouse layout:
+        // [ 5 ] - [ 4 ]
+        // |   |   |   |
+        // 1 - [ 2 ] - 3
+        // Explanation:
+        // - Node 5 is connected to Node 1, Node 2, and Node 4 (all horizontally and/or vertically).
+        // - Node 1 is connected to Node 2 (horizontally).
+        // - Node 2 is connected to Node 3 (horizontally).
+        // - Node 4 is connected to Node 3 (vertically).
         function IrregularMapTraversal(h1,h2) {
             const hall1 = AllHalls.filter((x)=>{if(x.id===h1){return x}})
             const hall2 = AllHalls.filter((x)=>{if(x.id===h2){return x}})
@@ -443,7 +452,15 @@
                 for (let j = 0; j < y[i].length; j++) {
                     // Make it applicable from left to right and right to left
                     // merge[i+x.length][j+ (x[0].length-y[0].length)] = y[i][j];
-                    merge[i+x.length][j] = y[i][j];
+                    console.log(checkWalls(x))
+                    if(checkWalls(y)===3)
+                    {
+                        merge[i + x.length][j] = y[i][j];
+                    }
+                    if(checkWalls(y)===0)
+                    {
+                        merge[i+x.length][j+ (x[0].length-y[0].length)] = y[i][j];
+                    }
                 }
             }
             console.log(merge)
